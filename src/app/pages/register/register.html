@@ -1,0 +1,43 @@
+<div class="register-container">
+    <div class="register-card">
+        <h2>Crear Cuenta</h2>
+        <p>Únete a la Biblioteca Universitaria</p>
+
+        <form (ngSubmit)="onRegister()">
+            <div class="form-group">
+                <label>Nombre Completo</label>
+                <input type="text" name="nombre" [(ngModel)]="nuevoUsuario.nombre" required placeholder="Tu nombre">
+            </div>
+
+            <div class="form-group">
+                <label>Correo Electrónico</label>
+                <input type="email" name="email" [(ngModel)]="nuevoUsuario.email" required placeholder="correo@u.edu">
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" name="password" [(ngModel)]="nuevoUsuario.password" required
+                    placeholder="********">
+            </div>
+
+            <div class="form-group">
+                <label>Tipo de Usuario (Rol)</label>
+                <select name="tipoUsuario" [(ngModel)]="nuevoUsuario.tipoUsuario">
+                    <option value="ESTUDIANTE">Estudiante</option>
+                    <option value="DOCENTE">Docente</option>
+                    <option value="ADMINISTRADOR">Administrador</option>
+                </select>
+            </div>
+
+            <div [class]="isError ? 'message error' : 'message success'" *ngIf="mensaje">
+                {{ mensaje }}
+            </div>
+
+            <button type="submit" class="btn-register">Registrarse</button>
+        </form>
+
+        <div class="login-link">
+            <p>¿Ya tienes cuenta? <a (click)="irALogin()">Inicia sesión</a></p>
+        </div>
+    </div>
+</div>

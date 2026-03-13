@@ -1,0 +1,37 @@
+<div class="dashboard-wrapper">
+    <nav class="navbar">
+        <div class="nav-content">
+            <h1>📚 Biblioteca <span class="badge">{{ usuario?.tipoUsuario }}</span></h1>
+            <div class="user-info">
+                <span>Bienvenido, <strong>{{ usuario?.nombre }}</strong></span>
+                <button (click)="cerrarSesion()" class="btn-logout">Salir</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <div class="search-bar">
+            <input type="text" [(ngModel)]="filtroTitulo" placeholder="Buscar por título..." (input)="cargarLibros()">
+        </div>
+
+        <div class="books-grid">
+            <div class="book-card" *ngFor="let libro of libros">
+                <div class="book-cover">📖</div>
+                <div class="book-details">
+                    <h3>{{ libro.titulo }}</h3>
+                    <p class="author">Por: {{ libro.autor }}</p>
+                    <p class="stock">Disponibles: <strong>{{ libro.stock }}</strong></p>
+
+                    <button [disabled]="libro.stock <= 0" (click)="reservar(libro.id)"
+                        [class]="libro.stock > 0 ? 'btn-reserve' : 'btn-disabled'">
+                        {{ libro.stock > 0 ? 'Reservar Libro' : 'Agotado' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="no-results" *ngIf="libros.length === 0">
+            <p>No se encontraron libros disponibles.</p>
+        </div>
+    </main>
+</div>
