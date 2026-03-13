@@ -104,3 +104,10 @@
 .register-link a:hover {
     text-decoration: underline;
 }
+
+.error-message {
+    color: red;
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: center;
+}

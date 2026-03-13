@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiService } from '../../services/api';
+import { ApiService } from '../../services/api'; // Asegúrate que la ruta sea .service
 
 @Component({
   standalone: false,
@@ -15,7 +15,7 @@ export class LoginComponent {
     password: ''
   };
 
-  // Para mostrar mensajes de error (ej: contraseña incorrecta)
+  // Para mostrar mensajes de error
   errorMessage: string = '';
 
   constructor(private apiService: ApiService, private router: Router) { }
@@ -25,27 +25,23 @@ export class LoginComponent {
 
     this.apiService.login(this.credenciales).subscribe({
       next: (usuario) => {
-        // ¡Éxito! Guardamos los datos del usuario en la memoria del navegador
+        // ¡Éxito! Guardamos los datos del usuario
         localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
 
         // Leemos el rol y lo enviamos a su dashboard correspondiente
-        if (usuario.tipoUsuario === 'ADMINISTRADOR') {
+        if (usuario.tipoUsuario === 'ADMINISTRADOR' || usuario.tipoUsuario === 'DOCENTE') {
           this.router.navigate(['/admin-dashboard']);
         } else {
           this.router.navigate(['/user-dashboard']);
         }
-      },
+      }, // <-- FÍJATE AQUÍ: Esta coma separa el 'next' del 'error'
       error: (err) => {
-        // Capturamos los errores que programamos en Spring Boot
-        if (err.status === 401) {
-          this.errorMessage = 'Contraseña incorrecta.';
-        } else if (err.status === 404) {
-          this.errorMessage = 'El usuario no existe.';
-        } else {
-          this.errorMessage = 'Error al conectar con el servidor (¿Está encendido el backend?).';
-        }
+        console.log("Detalle completo del error:", err); // Para chismear en la consola
+
+        // Mostramos el mensaje rojo SÍ o SÍ cada vez que falle el inicio de sesión
+        this.errorMessage = 'Correo o contraseña incorrectos. Por favor, verifica tus datos.';
       }
-    });
+    }); // <-- Aquí cierra el subscribe
   }
 
   irARegistro() {

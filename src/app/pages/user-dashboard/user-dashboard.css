@@ -122,3 +122,47 @@
     border-radius: 6px;
     cursor: not-allowed;
 }
+
+/* --- ESTILOS PARA LAS VENTANAS MODALES --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6); /* Fondo oscuro semitransparente */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Para que quede por encima de todo */
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-box {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 400px;
+    animation: slideUp 0.3s ease;
+}
+
+.modal-large {
+    max-width: 800px; /* Ventana más ancha para la tabla de libros */
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Animaciones suaves para que no aparezcan de golpe */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

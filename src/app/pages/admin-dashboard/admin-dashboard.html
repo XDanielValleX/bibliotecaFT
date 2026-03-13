@@ -1,1 +1,94 @@
-<p>admin-dashboard works!</p>
+<div class="dashboard-wrapper">
+    <nav class="navbar">
+        <div class="nav-content">
+            <h1>⚙️ Panel de Control <span class="badge">{{ usuario?.tipoUsuario }}</span></h1>
+            <div class="user-info" style="display: flex; align-items: center; gap: 15px;">
+                <span>Hola, <strong>{{ usuario?.nombre }}</strong></span>
+                <button (click)="actualizarDatos()" class="btn-refresh"
+                    style="padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    🔄 Actualizar
+                </button>
+                <button (click)="cerrarSesion()" class="btn-logout">Salir</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <section class="admin-section">
+            <h2>📋 Solicitudes de Reserva Pendientes</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID Préstamo</th>
+                        <th>Estudiante</th>
+                        <th>Libro</th>
+                        <th>Fecha Solicitud</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let reserva of reservas">
+                        <td>{{ reserva.idPrestamo || reserva.id_prestamo || reserva.id }}</td>
+                        <td>{{ reserva.usuario?.nombre }}</td>
+                        <td>{{ reserva.libro?.titulo }}</td>
+                        <td>{{ reserva.fechaSolicitud || reserva.fecha_solicitud | date:'shortDate' }}</td>
+                        <td>
+                            <button class="btn-approve"
+                                (click)="aprobar(reserva.idPrestamo || reserva.id_prestamo || reserva.id)">
+                                ✔️ Aprobar
+                            </button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="reservas.length === 0">
+                        <td colspan="5" class="text-center" style="padding: 20px; color: #7f8c8d;">
+                            No hay reservas pendientes en este momento. ¡Todo al día! 🎉
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="admin-section" *ngIf="usuario?.tipoUsuario === 'ADMINISTRADOR'">
+            <h2>📚 Gestión de Catálogo de Libros</h2>
+
+            <div class="form-container">
+                <h3>Agregar Nuevo Libro</h3>
+                <form (ngSubmit)="agregarLibro()" class="add-book-form">
+                    <input type="text" [(ngModel)]="nuevoLibro.titulo" name="titulo" placeholder="Título del libro"
+                        required>
+                    <input type="text" [(ngModel)]="nuevoLibro.autor" name="autor" placeholder="Autor" required>
+                    <input type="text" [(ngModel)]="nuevoLibro.editorial" name="editorial" placeholder="Editorial">
+                    <input type="number" [(ngModel)]="nuevoLibro.stockTotal" name="stockTotal"
+                        placeholder="Cantidad (Ej. 5)" required min="1">
+                    <button type="submit" class="btn-add">➕ Guardar Libro</button>
+                </form>
+            </div>
+
+            <table class="data-table mt-20">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Stock Total</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let libro of libros">
+                        <td>{{ libro.idLibro || libro.id_libro || libro.id }}</td>
+                        <td>{{ libro.titulo }}</td>
+                        <td>{{ libro.autor }}</td>
+                        <td>{{ libro.stockTotal || libro.stock_total }}</td>
+                        <td>
+                            <button class="btn-delete"
+                                (click)="eliminarLibro(libro.idLibro || libro.id_libro || libro.id)">
+                                🗑️ Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</div>

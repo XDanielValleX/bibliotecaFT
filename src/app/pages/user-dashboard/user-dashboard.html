@@ -2,16 +2,30 @@
     <nav class="navbar">
         <div class="nav-content">
             <h1>📚 Biblioteca <span class="badge">{{ usuario?.tipoUsuario }}</span></h1>
-            <div class="user-info">
+
+            <div class="user-info" style="display: flex; align-items: center; gap: 15px;">
                 <span>Bienvenido, <strong>{{ usuario?.nombre }}</strong></span>
+
+                <button (click)="abrirMisLibros()"
+                    style="padding: 8px 15px; background-color: #f39c12; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    📖 Mis Libros <span
+                        style="background: white; color: black; border-radius: 50%; padding: 2px 6px; font-size: 0.8em; margin-left: 5px;">{{
+                        misLibrosAprobados.length }}</span>
+                </button>
+
+                <button (click)="actualizarDatos()"
+                    style="padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    🔄 Actualizar
+                </button>
                 <button (click)="cerrarSesion()" class="btn-logout">Salir</button>
             </div>
         </div>
     </nav>
 
     <main class="content">
-        <div class="search-bar">
-            <input type="text" [(ngModel)]="filtroTitulo" placeholder="Buscar por título..." (input)="cargarLibros()">
+        <div class="search-bar" style="margin-bottom: 20px;">
+            <input type="text" [(ngModel)]="filtroTitulo" placeholder="Buscar por título..." (input)="cargarLibros()"
+                style="width: 100%; max-width: 400px; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
         </div>
 
         <div class="books-grid">
@@ -20,11 +34,14 @@
                 <div class="book-details">
                     <h3>{{ libro.titulo }}</h3>
                     <p class="author">Por: {{ libro.autor }}</p>
-                    <p class="stock">Disponibles: <strong>{{ libro.stock }}</strong></p>
+                    <p class="stock">Disponibles: <strong>{{ libro.stockDisponible || libro.stock_disponible }}</strong>
+                    </p>
 
-                    <button [disabled]="libro.stock <= 0" (click)="reservar(libro.id)"
-                        [class]="libro.stock > 0 ? 'btn-reserve' : 'btn-disabled'">
-                        {{ libro.stock > 0 ? 'Reservar Libro' : 'Agotado' }}
+                    <button [disabled]="(libro.stockDisponible || libro.stock_disponible) <= 0"
+                        (click)="reservar(libro.id_libro || libro.idLibro || libro.id)"
+                        [class]="(libro.stockDisponible || libro.stock_disponible) > 0 ? 'btn-reserve' : 'btn-disabled'"
+                        [style.opacity]="(libro.stockDisponible || libro.stock_disponible) <= 0 ? '0.5' : '1'">
+                        {{ (libro.stockDisponible || libro.stock_disponible) > 0 ? 'Reservar Libro' : 'Agotado' }}
                     </button>
                 </div>
             </div>
@@ -34,4 +51,56 @@
             <p>No se encontraron libros disponibles.</p>
         </div>
     </main>
+</div>
+
+<div class="modal-overlay" *ngIf="alertaVisible">
+    <div class="modal-box text-center">
+        <h2 style="color: #2c3e50; margin-top: 0;">Aviso</h2>
+        <p style="margin: 20px 0; font-size: 1.1em;">{{ mensajeAlerta }}</p>
+        <button (click)="cerrarMensaje()"
+            style="background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em;">
+            Aceptar
+        </button>
+    </div>
+</div>
+
+<div class="modal-overlay" *ngIf="modalLibrosVisible">
+    <div class="modal-box modal-large">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 15px;">
+            <h2 style="color: #2c3e50; margin: 0;">📖 Mis Libros Activos</h2>
+            <button (click)="cerrarMisLibros()"
+                style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #e74c3c;">❌</button>
+        </div>
+
+        <div *ngIf="misLibrosAprobados.length === 0" style="text-align: center; padding: 30px; color: #7f8c8d;">
+            <p>Aún no tienes libros aprobados o activos.</p>
+        </div>
+
+        <table *ngIf="misLibrosAprobados.length > 0" class="data-table"
+            style="width: 100%; text-align: left; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #f8f9fa;">
+                    <th style="padding: 12px; border-bottom: 2px solid #ddd;">Libro</th>
+                    <th style="padding: 12px; border-bottom: 2px solid #ddd;">Autor</th>
+                    <th style="padding: 12px; border-bottom: 2px solid #ddd;">Fecha Límite</th>
+                    <th style="padding: 12px; border-bottom: 2px solid #ddd;">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let prestamo of misLibrosAprobados" style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px;"><strong>{{ prestamo.libro?.titulo || 'Libro sin título' }}</strong></td>
+                    <td style="padding: 12px;">{{ prestamo.libro?.autor || 'Desconocido' }}</td>
+                    <td style="padding: 12px;">{{ prestamo.fecha_limite || prestamo.fechaLimite | date:'mediumDate' }}
+                    </td>
+                    <td style="padding: 12px;">
+                        <span
+                            style="background-color: #2ecc71; color: white; padding: 5px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">
+                            Activo ✅
+                        </span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
