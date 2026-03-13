@@ -12,8 +12,8 @@ export class ApiService {
   constructor(private http: HttpClient) { }
 
   // 1. USUARIOS (Login y Registro)
-  login(credenciales: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/usuarios/login`, credenciales);
+  login(credenciales: { email: string; password: string }): Observable<unknown> {
+    return this.http.post<unknown>(`${this.baseUrl}/usuarios/login`, credenciales);
   }
 
   registrarUsuario(usuario: any): Observable<any> {
@@ -38,12 +38,24 @@ export class ApiService {
 
   // === Lógica de Sesión ===
   isLoggedIn(): boolean {
-    return localStorage.getItem('usuarioLogueado') !== null;
+    const raw = localStorage.getItem('usuarioLogueado');
+    if (!raw) return false;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed !== null && typeof parsed === 'object';
+    } catch {
+      return false;
+    }
   }
 
   getUserData() {
     const user = localStorage.getItem('usuarioLogueado');
-    return user ? JSON.parse(user) : null;
+    if (!user) return null;
+    try {
+      return JSON.parse(user);
+    } catch {
+      return null;
+    }
   }
 
   logout() {

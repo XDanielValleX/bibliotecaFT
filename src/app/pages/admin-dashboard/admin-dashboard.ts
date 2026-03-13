@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api';
 import { Router } from '@angular/router';
 
@@ -13,10 +13,43 @@ export class AdminDashboardComponent implements OnInit {
   reservas: any[] = [];
   libros: any[] = [];
 
+  // --- VENTANITA (MODAL) PARA MENSAJES ---
+  alertaVisible: boolean = false;
+  mensajeAlerta: string = '';
+
   // CORRECCIÓN: Usamos camelCase (stockTotal y stockDisponible) para que coincida con Java
   nuevoLibro = { titulo: '', autor: '', editorial: '', stockTotal: 0, stockDisponible: 0 };
 
-  constructor(private apiService: ApiService, private router: Router) { }
+  constructor(
+    private apiService: ApiService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  private refrescarVista() {
+    // En apps "zoneless" (sin zone.js), algunos callbacks async no repintan la UI.
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // componente destruido
+    }
+  }
+
+  mostrarMensaje(mensaje: string) {
+    this.mensajeAlerta = mensaje;
+    this.alertaVisible = true;
+    this.refrescarVista();
+  }
+
+  cerrarMensaje() {
+    this.alertaVisible = false;
+    this.refrescarVista();
+  }
+
+  private esReservaPendiente(reserva: any): boolean {
+    const estado = reserva?.estado;
+    return typeof estado === 'string' && estado.toUpperCase() === 'RESERVADA';
+  }
 
   ngOnInit(): void {
     this.usuario = this.apiService.getUserData();
@@ -43,26 +76,47 @@ export class AdminDashboardComponent implements OnInit {
   // --- MÉTODOS DE RESERVAS (DOCENTE Y ADMIN) ---
   cargarReservas() {
     this.apiService.obtenerTodasLasReservas().subscribe({
-      next: (data) => this.reservas = data,
-      error: (err) => console.log('Sin reservas o error de conexión')
+      next: (data: any) => {
+        const lista = Array.isArray(data) ? data : [];
+        // Mostramos solo reservas PENDIENTES (RESERVADA)
+        this.reservas = lista.filter((r) => this.esReservaPendiente(r));
+        this.refrescarVista();
+      },
+      error: () => this.mostrarMensaje('No se pudieron cargar las reservas. Verifica tu conexión o el backend.')
     });
   }
 
   aprobar(idPrestamo: number) {
     this.apiService.aprobarReserva(idPrestamo).subscribe({
       next: () => {
-        alert('✅ Reserva aprobada y libro prestado');
+        // Quitamos la reserva de la lista al instante (optimista)
+        this.reservas = this.reservas.filter((r: any) => {
+          const rid = r?.idPrestamo ?? r?.id_prestamo ?? r?.id;
+          return rid !== idPrestamo;
+        });
+        this.mostrarMensaje('✅ Reserva aprobada y libro prestado');
+        // Recargamos por si hay cambios en backend
         this.cargarReservas();
       },
-      error: (err) => alert('Error al aprobar la reserva')
+      error: (err) => {
+        const backendMessage = err?.error?.message || err?.error?.error || err?.error;
+        this.mostrarMensaje(
+          typeof backendMessage === 'string' && backendMessage.trim().length > 0
+            ? backendMessage
+            : 'Error al aprobar la reserva.'
+        );
+      }
     });
   }
 
   // --- MÉTODOS DE LIBROS (SOLO ADMIN) ---
   cargarLibros() {
     this.apiService.obtenerLibros('').subscribe({
-      next: (data) => this.libros = data,
-      error: (err) => console.log('Error al cargar catálogo')
+      next: (data) => {
+        this.libros = data;
+        this.refrescarVista();
+      },
+      error: () => this.mostrarMensaje('Error al cargar el catálogo de libros.')
     });
   }
 
@@ -72,14 +126,18 @@ export class AdminDashboardComponent implements OnInit {
 
     this.apiService.agregarLibro(this.nuevoLibro).subscribe({
       next: () => {
-        alert('📚 Libro agregado exitosamente');
+        this.mostrarMensaje('📚 Libro agregado exitosamente');
         this.cargarLibros();
         // CORRECCIÓN: Limpiar el formulario usando camelCase
         this.nuevoLibro = { titulo: '', autor: '', editorial: '', stockTotal: 0, stockDisponible: 0 };
       },
       error: (err) => {
-        console.error("Detalle del error al agregar:", err);
-        alert('Error al agregar el libro');
+        const backendMessage = err?.error?.message || err?.error?.error || err?.error;
+        this.mostrarMensaje(
+          typeof backendMessage === 'string' && backendMessage.trim().length > 0
+            ? backendMessage
+            : 'Error al agregar el libro.'
+        );
       }
     });
   }
@@ -88,10 +146,17 @@ export class AdminDashboardComponent implements OnInit {
     if (confirm('¿Estás seguro de que deseas eliminar este libro?')) {
       this.apiService.eliminarLibro(idLibro).subscribe({
         next: () => {
-          alert('🗑️ Libro eliminado');
+          this.mostrarMensaje('🗑️ Libro eliminado');
           this.cargarLibros();
         },
-        error: (err) => alert('Error al eliminar libro')
+        error: (err) => {
+          const backendMessage = err?.error?.message || err?.error?.error || err?.error;
+          this.mostrarMensaje(
+            typeof backendMessage === 'string' && backendMessage.trim().length > 0
+              ? backendMessage
+              : 'Error al eliminar el libro.'
+          );
+        }
       });
     }
   }

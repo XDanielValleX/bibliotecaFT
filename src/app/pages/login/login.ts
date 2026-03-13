@@ -1,6 +1,14 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api'; // Asegúrate que la ruta sea .service
+
+type TipoUsuario = 'ESTUDIANTE' | 'DOCENTE' | 'ADMINISTRADOR';
+
+type UsuarioLogin = {
+  tipoUsuario?: TipoUsuario | string;
+  // Algunos backends envían snake_case
+  tipo_usuario?: TipoUsuario | string;
+} | null;
 
 @Component({
   standalone: false,
@@ -16,30 +24,72 @@ export class LoginComponent {
   };
 
   // Para mostrar mensajes de error
-  errorMessage: string = '';
+  errorMessage = '';
 
-  constructor(private apiService: ApiService, private router: Router) { }
+  constructor(
+    private apiService: ApiService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  private setErrorMessage(message: string) {
+    this.errorMessage = message;
+    // En apps "zoneless" (sin zone.js), los callbacks async pueden no refrescar la vista.
+    // Forzamos detección de cambios para que el mensaje se muestre.
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // Si el componente ya fue destruido, evitamos romper el flujo.
+    }
+  }
+
+  private getTipoUsuario(usuario: UsuarioLogin): string | null {
+    if (!usuario || typeof usuario !== 'object') return null;
+    const tipo = (usuario as any).tipoUsuario ?? (usuario as any).tipo_usuario;
+    return typeof tipo === 'string' && tipo.length > 0 ? tipo : null;
+  }
 
   onLogin() {
-    this.errorMessage = ''; // Limpiar errores antes de intentar
+    this.setErrorMessage(''); // Limpiar errores antes de intentar
 
     this.apiService.login(this.credenciales).subscribe({
       next: (usuario) => {
-        // ¡Éxito! Guardamos los datos del usuario
-        localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
+        try {
+          const tipoUsuario = this.getTipoUsuario(usuario as UsuarioLogin);
 
-        // Leemos el rol y lo enviamos a su dashboard correspondiente
-        if (usuario.tipoUsuario === 'ADMINISTRADOR' || usuario.tipoUsuario === 'DOCENTE') {
-          this.router.navigate(['/admin-dashboard']);
-        } else {
-          this.router.navigate(['/user-dashboard']);
+          // Si el backend responde 200 pero no devuelve un usuario válido,
+          // tratamos esto como credenciales incorrectas.
+          if (!tipoUsuario) {
+            localStorage.removeItem('usuarioLogueado');
+            this.setErrorMessage('Correo o contraseña incorrectos. Por favor, verifica tus datos.');
+            return;
+          }
+
+          // ¡Éxito! Guardamos los datos del usuario
+          localStorage.setItem('usuarioLogueado', JSON.stringify(usuario));
+
+          // Leemos el rol y lo enviamos a su dashboard correspondiente
+          if (tipoUsuario === 'ADMINISTRADOR' || tipoUsuario === 'DOCENTE') {
+            this.router.navigate(['/admin-dashboard']);
+          } else {
+            this.router.navigate(['/user-dashboard']);
+          }
+        } catch (e) {
+          console.error('Respuesta inesperada al hacer login:', e, usuario);
+          localStorage.removeItem('usuarioLogueado');
+          this.setErrorMessage('No se pudo iniciar sesión. Verifica tus credenciales e intenta de nuevo.');
         }
       }, // <-- FÍJATE AQUÍ: Esta coma separa el 'next' del 'error'
       error: (err) => {
         console.log("Detalle completo del error:", err); // Para chismear en la consola
 
         // Mostramos el mensaje rojo SÍ o SÍ cada vez que falle el inicio de sesión
-        this.errorMessage = 'Correo o contraseña incorrectos. Por favor, verifica tus datos.';
+        const backendMessage = err?.error?.message || err?.error?.error || err?.error;
+        this.setErrorMessage(
+          typeof backendMessage === 'string' && backendMessage.trim().length > 0
+            ? backendMessage
+            : 'Correo o contraseña incorrectos. Por favor, verifica tus datos.'
+        );
       }
     }); // <-- Aquí cierra el subscribe
   }

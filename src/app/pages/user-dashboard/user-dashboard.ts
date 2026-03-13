@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api';
 import { Router } from '@angular/router';
 
@@ -19,7 +19,19 @@ export class UserDashboardComponent implements OnInit {
   mensajeAlerta: string = '';
   modalLibrosVisible: boolean = false;
 
-  constructor(private apiService: ApiService, private router: Router) { }
+  constructor(
+    private apiService: ApiService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  private refrescarVista() {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // componente destruido
+    }
+  }
 
   ngOnInit(): void {
     this.usuario = this.apiService.getUserData();
@@ -30,18 +42,24 @@ export class UserDashboardComponent implements OnInit {
   mostrarMensaje(mensaje: string) {
     this.mensajeAlerta = mensaje;
     this.alertaVisible = true;
+    this.refrescarVista();
   }
 
   cerrarMensaje() {
     this.alertaVisible = false;
+    this.refrescarVista();
   }
 
   abrirMisLibros() {
     this.modalLibrosVisible = true;
+    // Aseguramos que la lista esté al día al abrir
+    this.cargarMisLibrosPrestados();
+    this.refrescarVista();
   }
 
   cerrarMisLibros() {
     this.modalLibrosVisible = false;
+    this.refrescarVista();
   }
 
   // --- CARGA DE DATOS ---
@@ -51,23 +69,49 @@ export class UserDashboardComponent implements OnInit {
   }
 
   cargarMisLibrosPrestados() {
-    this.apiService.obtenerTodasLasReservas().subscribe({
-      next: (data) => {
-        let idUsr = this.usuario.id_usuario || this.usuario.idUsuario || this.usuario.id;
-        this.misLibrosAprobados = data.filter((reserva: any) => 
-          (reserva.usuario?.id === idUsr || reserva.idUsuario === idUsr || reserva.id_usuario === idUsr || reserva.usuario?.id_usuario === idUsr) 
-          && (reserva.estado === 'ACTIVO')
-        );
+    const idUsr = this.usuario?.id_usuario || this.usuario?.idUsuario || this.usuario?.id;
+    if (!idUsr) {
+      this.misLibrosAprobados = [];
+      return;
+    }
+
+    // Usamos el endpoint correcto: historial del usuario
+    this.apiService.obtenerHistorial(idUsr).subscribe({
+      next: (data: any) => {
+        const lista = Array.isArray(data) ? data : [];
+        // "Aprobados" = ACTIVO
+        this.misLibrosAprobados = lista.filter((p: any) => {
+          const estado = p?.estado;
+          return typeof estado === 'string' && estado.toUpperCase() === 'ACTIVO';
+        });
+        this.refrescarVista();
       },
-      error: (err) => console.log('Error al cargar mis préstamos')
+      error: (err) => {
+        const backendMessage = err?.error?.message || err?.error?.error || err?.error;
+        this.mostrarMensaje(
+          typeof backendMessage === 'string' && backendMessage.trim().length > 0
+            ? backendMessage
+            : 'Error al cargar tus libros aprobados.'
+        );
+      }
     });
   }
 
   cargarLibros() {
     let filtro = this.filtroTitulo ? this.filtroTitulo.trim() : '';
     this.apiService.obtenerLibros(filtro).subscribe({
-      next: (data) => this.libros = data,
-      error: (err) => console.error('Error al cargar libros', err)
+      next: (data) => {
+        this.libros = data;
+        this.refrescarVista();
+      },
+      error: (err) => {
+        const backendMessage = err?.error?.message || err?.error?.error || err?.error;
+        this.mostrarMensaje(
+          typeof backendMessage === 'string' && backendMessage.trim().length > 0
+            ? backendMessage
+            : 'Error al cargar los libros.'
+        );
+      }
     });
   }
 
