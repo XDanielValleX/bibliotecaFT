@@ -81,8 +81,6 @@ export class LoginComponent {
         }
       }, // <-- FÍJATE AQUÍ: Esta coma separa el 'next' del 'error'
       error: (err) => {
-        console.log("Detalle completo del error:", err); // Para chismear en la consola
-
         // Mostramos el mensaje rojo SÍ o SÍ cada vez que falle el inicio de sesión
         const backendMessage = err?.error?.message || err?.error?.error || err?.error;
         this.setErrorMessage(
