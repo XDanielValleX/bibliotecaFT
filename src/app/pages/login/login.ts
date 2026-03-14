@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api'; // Asegúrate que la ruta sea .service
 
@@ -26,22 +26,7 @@ export class LoginComponent {
   // Para mostrar mensajes de error
   errorMessage = '';
 
-  constructor(
-    private apiService: ApiService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
-
-  private setErrorMessage(message: string) {
-    this.errorMessage = message;
-    // En apps "zoneless" (sin zone.js), los callbacks async pueden no refrescar la vista.
-    // Forzamos detección de cambios para que el mensaje se muestre.
-    try {
-      this.cdr.detectChanges();
-    } catch {
-      // Si el componente ya fue destruido, evitamos romper el flujo.
-    }
-  }
+  constructor(private apiService: ApiService, private router: Router) { }
 
   private getTipoUsuario(usuario: UsuarioLogin): string | null {
     if (!usuario || typeof usuario !== 'object') return null;
@@ -50,7 +35,7 @@ export class LoginComponent {
   }
 
   onLogin() {
-    this.setErrorMessage(''); // Limpiar errores antes de intentar
+    this.errorMessage = ''; // Limpiar errores antes de intentar
 
     this.apiService.login(this.credenciales).subscribe({
       next: (usuario) => {
@@ -61,7 +46,7 @@ export class LoginComponent {
           // tratamos esto como credenciales incorrectas.
           if (!tipoUsuario) {
             localStorage.removeItem('usuarioLogueado');
-            this.setErrorMessage('Correo o contraseña incorrectos. Por favor, verifica tus datos.');
+            this.errorMessage = 'Correo o contraseña incorrectos. Por favor, verifica tus datos.';
             return;
           }
 
@@ -77,17 +62,18 @@ export class LoginComponent {
         } catch (e) {
           console.error('Respuesta inesperada al hacer login:', e, usuario);
           localStorage.removeItem('usuarioLogueado');
-          this.setErrorMessage('No se pudo iniciar sesión. Verifica tus credenciales e intenta de nuevo.');
+          this.errorMessage = 'No se pudo iniciar sesión. Verifica tus credenciales e intenta de nuevo.';
         }
       }, // <-- FÍJATE AQUÍ: Esta coma separa el 'next' del 'error'
       error: (err) => {
+        console.log("Detalle completo del error:", err); // Para chismear en la consola
+
         // Mostramos el mensaje rojo SÍ o SÍ cada vez que falle el inicio de sesión
         const backendMessage = err?.error?.message || err?.error?.error || err?.error;
-        this.setErrorMessage(
+        this.errorMessage =
           typeof backendMessage === 'string' && backendMessage.trim().length > 0
             ? backendMessage
-            : 'Correo o contraseña incorrectos. Por favor, verifica tus datos.'
-        );
+            : 'Correo o contraseña incorrectos. Por favor, verifica tus datos.';
       }
     }); // <-- Aquí cierra el subscribe
   }
